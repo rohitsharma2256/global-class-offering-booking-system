@@ -13,6 +13,7 @@ import com.rohit.global_class_offering_booking_system.repository.OfferingRepo;
 import com.rohit.global_class_offering_booking_system.repository.SessionRepo;
 import com.rohit.global_class_offering_booking_system.repository.TeacherRepo;
 import com.rohit.global_class_offering_booking_system.service.TeacherService;
+import com.rohit.global_class_offering_booking_system.util.TimeZoneUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,15 +37,11 @@ public class TeacherServiceImpl implements TeacherService {
 
         Teacher teacher = teacherRepo.findById(
                         request.getTeacherId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Teacher not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found"));
 
         Course course = courseRepo.findById(
                         request.getCourseId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Course not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found"));
 
 
         Offering offering = Offering.builder()
@@ -63,34 +61,27 @@ public class TeacherServiceImpl implements TeacherService {
     }
 
     @Override
-    public void addSession(
-            Long offeringId,
-            AddSessionRequest request) {
-        Offering offering =
-                offeringRepo.findById(offeringId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Offering not found"));
+    public void addSession(Long offeringId, AddSessionRequest request) {
 
-        Instant startUtc =
-                LocalDateTime.parse(request.getStartTime())
-                        .atZone(ZoneId.of(request.getTeacherTimezone()))
-                        .toInstant();
+        Offering offering = offeringRepo.findById(offeringId)
+                .orElseThrow(() -> new ResourceNotFoundException("Offering not found"));
 
-        Instant endUtc =
-                LocalDateTime.parse(request.getEndTime())
-                        .atZone(ZoneId.of(request.getTeacherTimezone()))
-                        .toInstant();
+        Instant startUtc = TimeZoneUtil.toUtcInstant(
+                request.getStartTime(), request.getTeacherTimezone());
+        Instant endUtc = TimeZoneUtil.toUtcInstant(
+                request.getEndTime(), request.getTeacherTimezone());
 
-        Session session =
-                Session.builder()
-                        .offering(offering)
-                        .startTime(startUtc)
-                        .endTime(endUtc)
-                        .build();
+        if (!endUtc.isAfter(startUtc)) {
+            throw new IllegalArgumentException("Session endTime must be after startTime");
+        }
+
+        Session session = Session.builder()
+                .offering(offering)
+                .startTime(startUtc)
+                .endTime(endUtc)
+                .build();
 
         sessionRepo.save(session);
-
     }
 
     @Override
@@ -99,19 +90,13 @@ public class TeacherServiceImpl implements TeacherService {
 
         return offeringRepo.findByTeacherId(teacherId)
                 .stream()
-                .map(offering ->
-                        OfferingResponse.builder()
+                .map(offering -> OfferingResponse.builder()
                                 .offeringId(offering.getId())
-                                .courseName(
-                                        offering.getCourse()
-                                                .getCourseName())
-                                .batchName(
-                                        offering.getBatchName())
-                                .teacherName(
-                                        offering.getTeacher()
-                                                .getName())
+                                .courseName(offering.getCourse().getCourseName())
+                                .batchName(offering.getBatchName())
+                                .teacherName(offering.getTeacher().getName())
                                 .build())
-                .toList();
+                .collect(Collectors.toList());
     }
 }
 

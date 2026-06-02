@@ -5,6 +5,7 @@ import com.rohit.global_class_offering_booking_system.dto.request.AddSessionRequ
 import com.rohit.global_class_offering_booking_system.dto.request.CreateOfferingRequest;
 import com.rohit.global_class_offering_booking_system.dto.response.OfferingResponse;
 import com.rohit.global_class_offering_booking_system.service.TeacherService;
+import jakarta.validation.Valid;
 import lombok.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,9 +28,7 @@ public class TeacherController {
 
     //add sessions to offering
     @PostMapping("/offerings/{offeringId}/sessions")
-    public String addSession(
-            @PathVariable Long offeringId,
-            @RequestBody AddSessionRequest request) {
+    public String addSession(@PathVariable Long offeringId, @Valid @RequestBody AddSessionRequest request) {
 
         teacherService.addSession(
                 offeringId,

@@ -8,13 +8,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "bookings",
-        uniqueConstraints = {
-        @UniqueConstraint(
-                columnNames = {
-                        "parent_id",
-                        "offering_id"
-                }
-        )
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"parent_id","offering_id"} )
         })
 
 @Getter
